@@ -8,16 +8,18 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BookOpen, Plus, Calendar, CircleCheck as CheckCircle, Circle, Star, Clock, Filter, MoveVertical as MoreVertical, CreditCard as Edit3, Trash2, Bell, Repeat, Tag, List } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Task, TaskList, Prayer } from '@/types/planner';
+import { useTheme } from '@/components/ThemeContext';
 
 const taskLists: TaskList[] = [
-  { id: '1', name: 'Daily Prayers', color: '#059669', icon: 'prayer', taskCount: 5, completedCount: 3 },
+  { id: '1', name: 'Daily Prayers', color: '#059669', icon: 'moon', taskCount: 5, completedCount: 3 },
   { id: '2', name: 'Quran Study', color: '#3B82F6', icon: 'book', taskCount: 3, completedCount: 1 },
-  { id: '3', name: 'Islamic Learning', color: '#F59E0B', icon: 'star', taskCount: 4, completedCount: 2 },
-  { id: '4', name: 'Personal Tasks', color: '#8B5CF6', icon: 'user', taskCount: 6, completedCount: 4 },
+  { id: '3', name: 'Islamic Learning', color: '#F59E0B', icon: 'school', taskCount: 4, completedCount: 2 },
+  { id: '4', name: 'Personal Tasks', color: '#8B5CF6', icon: 'person', taskCount: 6, completedCount: 4 },
 ];
 
 const priorityColors = {
@@ -27,12 +29,22 @@ const priorityColors = {
   urgent: '#DC2626',
 };
 
+const categoryIcons = {
+  prayer: 'moon',
+  quran: 'book',
+  dhikr: 'heart',
+  charity: 'gift',
+  learning: 'school',
+  personal: 'person',
+};
+
 export default function PlannerScreen() {
+  const { colors, isDark, toggleTheme } = useTheme();
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
       title: 'Read Surah Al-Kahf',
-      description: 'Friday weekly reading',
+      description: 'Friday weekly reading - Sunnah practice',
       completed: false,
       priority: 'high',
       category: 'quran',
@@ -79,6 +91,7 @@ export default function PlannerScreen() {
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [selectedCategory, setSelectedCategory] = useState<'prayer' | 'quran' | 'dhikr' | 'charity' | 'learning' | 'personal'>('personal');
+  const [isRecurring, setIsRecurring] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const toggleTask = (taskId: string) => {
@@ -109,11 +122,14 @@ export default function PlannerScreen() {
       priority: selectedPriority,
       category: selectedCategory,
       createdAt: new Date(),
+      isRecurring,
+      recurringType: isRecurring ? 'daily' : undefined,
     };
 
     setTasks(prev => [newTask, ...prev]);
     setNewTaskTitle('');
     setNewTaskDescription('');
+    setIsRecurring(false);
     setShowAddTask(false);
   };
 
@@ -149,71 +165,117 @@ export default function PlannerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.headerTitle}>Islamic Planner</Text>
-              <Text style={styles.headerSubtitle}>
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </Text>
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="compass" size={28} color="#FFFFFF" />
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>Islamic Planner</Text>
+                <Text style={styles.headerSubtitle}>
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowAddTask(true)}>
-              <Plus size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+                <Ionicons 
+                  name={isDark ? 'sunny' : 'moon'} 
+                  size={20} 
+                  color="#FFFFFF" 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowAddTask(true)}>
+                <Ionicons name="add" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
         <View style={styles.content}>
           {/* Progress Overview */}
           <View style={styles.progressSection}>
-            <Text style={styles.sectionTitle}>Today's Progress</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Progress</Text>
             <View style={styles.progressCards}>
-              <View style={styles.progressCard}>
+              <View style={[styles.progressCard, { backgroundColor: colors.card }]}>
                 <View style={styles.progressHeader}>
-                  <BookOpen size={20} color="#059669" />
-                  <Text style={styles.progressTitle}>Prayers</Text>
+                  <View style={[styles.progressIcon, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="moon" size={20} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.progressTitle, { color: colors.text }]}>Prayers</Text>
                 </View>
-                <Text style={styles.progressNumber}>{completedPrayersCount}/5</Text>
-                <Text style={styles.progressLabel}>Completed</Text>
+                <Text style={[styles.progressNumber, { color: colors.text }]}>{completedPrayersCount}/5</Text>
+                <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Completed</Text>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        backgroundColor: colors.primary,
+                        width: `${(completedPrayersCount / 5) * 100}%`
+                      }
+                    ]} 
+                  />
+                </View>
               </View>
-              <View style={styles.progressCard}>
+              
+              <View style={[styles.progressCard, { backgroundColor: colors.card }]}>
                 <View style={styles.progressHeader}>
-                  <CheckCircle size={20} color="#3B82F6" />
-                  <Text style={styles.progressTitle}>Tasks</Text>
+                  <View style={[styles.progressIcon, { backgroundColor: colors.secondary + '20' }]}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.secondary} />
+                  </View>
+                  <Text style={[styles.progressTitle, { color: colors.text }]}>Tasks</Text>
                 </View>
-                <Text style={styles.progressNumber}>{completedTasksCount}/{totalTasksCount}</Text>
-                <Text style={styles.progressLabel}>Completed</Text>
+                <Text style={[styles.progressNumber, { color: colors.text }]}>{completedTasksCount}/{totalTasksCount}</Text>
+                <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Completed</Text>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        backgroundColor: colors.secondary,
+                        width: totalTasksCount > 0 ? `${(completedTasksCount / totalTasksCount) * 100}%` : '0%'
+                      }
+                    ]} 
+                  />
+                </View>
               </View>
             </View>
           </View>
 
-          {/* Quick Prayer Status */}
+          {/* Prayer Status */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Prayer Status</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Prayer Status</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.prayerScroll}>
               {prayers.map((prayer) => (
                 <View key={prayer.id} style={[
                   styles.prayerCard,
-                  prayer.isCurrentPrayer && styles.currentPrayerCard
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  prayer.isCurrentPrayer && { borderColor: colors.primary, backgroundColor: colors.primary + '10' }
                 ]}>
-                  <Text style={styles.prayerName}>{prayer.name}</Text>
-                  <Text style={styles.prayerArabic}>{prayer.arabicName}</Text>
-                  <Text style={styles.prayerTime}>{prayer.time}</Text>
+                  <Text style={[styles.prayerName, { color: colors.text }]}>{prayer.name}</Text>
+                  <Text style={[styles.prayerArabic, { color: colors.primary }]}>{prayer.arabicName}</Text>
+                  <Text style={[styles.prayerTime, { color: colors.textSecondary }]}>{prayer.time}</Text>
                   <View style={styles.prayerStatus}>
-                    {prayer.completed ? (
-                      <CheckCircle size={20} color="#059669" />
-                    ) : (
-                      <Circle size={20} color="#9CA3AF" />
-                    )}
+                    <Ionicons 
+                      name={prayer.completed ? 'checkmark-circle' : 'ellipse-outline'} 
+                      size={24} 
+                      color={prayer.completed ? colors.success : colors.textSecondary} 
+                    />
                   </View>
+                  {prayer.isCurrentPrayer && (
+                    <View style={[styles.currentBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.currentBadgeText}>Current</Text>
+                    </View>
+                  )}
                 </View>
               ))}
             </ScrollView>
@@ -221,19 +283,30 @@ export default function PlannerScreen() {
 
           {/* Task Lists Overview */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Task Lists</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Task Lists</Text>
             <View style={styles.taskListsGrid}>
               {taskLists.map((list) => (
-                <TouchableOpacity key={list.id} style={[styles.taskListCard, { borderLeftColor: list.color }]}>
+                <TouchableOpacity 
+                  key={list.id} 
+                  style={[
+                    styles.taskListCard, 
+                    { backgroundColor: colors.card, borderLeftColor: list.color }
+                  ]}
+                >
                   <View style={styles.taskListHeader}>
-                    <Text style={styles.taskListName}>{list.name}</Text>
-                    <Text style={styles.taskListCount}>{list.completedCount}/{list.taskCount}</Text>
+                    <View style={styles.taskListLeft}>
+                      <Ionicons name={list.icon as any} size={20} color={list.color} />
+                      <Text style={[styles.taskListName, { color: colors.text }]}>{list.name}</Text>
+                    </View>
+                    <Text style={[styles.taskListCount, { color: colors.textSecondary }]}>
+                      {list.completedCount}/{list.taskCount}
+                    </Text>
                   </View>
                   <View style={styles.taskListProgress}>
-                    <View style={[styles.progressBar, { backgroundColor: `${list.color}20` }]}>
+                    <View style={[styles.progressBarSmall, { backgroundColor: list.color + '20' }]}>
                       <View 
                         style={[
-                          styles.progressFill, 
+                          styles.progressFillSmall, 
                           { 
                             backgroundColor: list.color,
                             width: `${(list.completedCount / list.taskCount) * 100}%`
@@ -256,13 +329,15 @@ export default function PlannerScreen() {
                     key={category}
                     style={[
                       styles.filterTab,
-                      filterCategory === category && styles.activeFilterTab
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      filterCategory === category && { backgroundColor: colors.primary, borderColor: colors.primary }
                     ]}
                     onPress={() => setFilterCategory(category)}
                   >
                     <Text style={[
                       styles.filterTabText,
-                      filterCategory === category && styles.activeFilterTabText
+                      { color: colors.textSecondary },
+                      filterCategory === category && { color: '#FFFFFF' }
                     ]}>
                       {category.charAt(0).toUpperCase() + category.slice(1)}
                     </Text>
@@ -275,60 +350,81 @@ export default function PlannerScreen() {
           {/* Tasks List */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Tasks</Text>
-              <TouchableOpacity>
-                <Filter size={20} color="#6B7280" />
-              </TouchableOpacity>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tasks</Text>
+              <Text style={[styles.taskCounter, { color: colors.textSecondary }]}>
+                {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
+              </Text>
             </View>
             
             {filteredTasks.length === 0 ? (
-              <View style={styles.emptyState}>
-                <List size={48} color="#9CA3AF" />
-                <Text style={styles.emptyStateText}>No tasks found</Text>
-                <Text style={styles.emptyStateSubtext}>
+              <View style={[styles.emptyState, { backgroundColor: colors.card }]}>
+                <Ionicons name="clipboard-outline" size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyStateText, { color: colors.text }]}>No tasks found</Text>
+                <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
                   {filterCategory === 'all' 
                     ? 'Add your first task to get started' 
                     : `No ${filterCategory} tasks yet`}
                 </Text>
+                <TouchableOpacity 
+                  style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setShowAddTask(true)}
+                >
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                  <Text style={styles.emptyStateButtonText}>Add Task</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               filteredTasks.map((task) => (
-                <View key={task.id} style={styles.taskCard}>
+                <View key={task.id} style={[styles.taskCard, { backgroundColor: colors.card }]}>
                   <TouchableOpacity 
                     style={styles.taskContent}
                     onPress={() => toggleTask(task.id)}
                   >
                     <View style={styles.taskLeft}>
-                      <View style={styles.taskCheckbox}>
-                        {task.completed ? (
-                          <CheckCircle size={24} color="#059669" />
-                        ) : (
-                          <Circle size={24} color="#9CA3AF" />
-                        )}
-                      </View>
+                      <TouchableOpacity style={styles.taskCheckbox} onPress={() => toggleTask(task.id)}>
+                        <Ionicons 
+                          name={task.completed ? 'checkmark-circle' : 'ellipse-outline'} 
+                          size={24} 
+                          color={task.completed ? colors.success : colors.textSecondary} 
+                        />
+                      </TouchableOpacity>
                       <View style={styles.taskInfo}>
                         <Text style={[
                           styles.taskTitle,
-                          task.completed && styles.completedTaskTitle
+                          { color: colors.text },
+                          task.completed && { textDecorationLine: 'line-through', color: colors.textSecondary }
                         ]}>
                           {task.title}
                         </Text>
                         {task.description && (
-                          <Text style={styles.taskDescription}>{task.description}</Text>
+                          <Text style={[styles.taskDescription, { color: colors.textSecondary }]}>
+                            {task.description}
+                          </Text>
                         )}
                         <View style={styles.taskMeta}>
                           <View style={[styles.priorityBadge, { backgroundColor: priorityColors[task.priority] }]}>
                             <Text style={styles.priorityText}>{task.priority}</Text>
                           </View>
-                          <Text style={styles.categoryText}>{task.category}</Text>
+                          <View style={styles.categoryBadge}>
+                            <Ionicons 
+                              name={categoryIcons[task.category] as any} 
+                              size={12} 
+                              color={colors.textSecondary} 
+                            />
+                            <Text style={[styles.categoryText, { color: colors.textSecondary }]}>
+                              {task.category}
+                            </Text>
+                          </View>
                           {task.dueDate && (
                             <View style={styles.dueDateContainer}>
-                              <Clock size={12} color="#6B7280" />
-                              <Text style={styles.dueDateText}>{formatDate(task.dueDate)}</Text>
+                              <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                              <Text style={[styles.dueDateText, { color: colors.textSecondary }]}>
+                                {formatDate(task.dueDate)}
+                              </Text>
                             </View>
                           )}
                           {task.isRecurring && (
-                            <Repeat size={12} color="#6B7280" />
+                            <Ionicons name="repeat" size={12} color={colors.secondary} />
                           )}
                         </View>
                       </View>
@@ -338,7 +434,7 @@ export default function PlannerScreen() {
                     style={styles.taskActions}
                     onPress={() => deleteTask(task.id)}
                   >
-                    <Trash2 size={16} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
                   </TouchableOpacity>
                 </View>
               ))
@@ -346,11 +442,12 @@ export default function PlannerScreen() {
           </View>
 
           {/* Islamic Quote */}
-          <View style={styles.quoteCard}>
-            <Text style={styles.quoteText}>
+          <View style={[styles.quoteCard, { backgroundColor: colors.secondary + '20', borderColor: colors.secondary }]}>
+            <Ionicons name="book" size={24} color={colors.secondary} style={styles.quoteIcon} />
+            <Text style={[styles.quoteText, { color: colors.text }]}>
               "And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose."
             </Text>
-            <Text style={styles.quoteReference}>- Quran 65:3</Text>
+            <Text style={[styles.quoteReference, { color: colors.secondary }]}>- Quran 65:3</Text>
           </View>
         </View>
       </ScrollView>
@@ -360,58 +457,63 @@ export default function PlannerScreen() {
         visible={showAddTask}
         animationType="slide"
         presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddTask(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowAddTask(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <Text style={[styles.modalCancel, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>New Task</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>New Task</Text>
             <TouchableOpacity onPress={addTask}>
-              <Text style={styles.modalSave}>Save</Text>
+              <Text style={[styles.modalSave, { color: colors.primary }]}>Save</Text>
             </TouchableOpacity>
           </View>
           
           <ScrollView style={styles.modalContent}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Title</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Title</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                 value={newTaskTitle}
                 onChangeText={setNewTaskTitle}
                 placeholder="Enter task title"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Description</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
               <TextInput
-                style={[styles.textInput, styles.textArea]}
+                style={[styles.textInput, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                 value={newTaskDescription}
                 onChangeText={setNewTaskDescription}
                 placeholder="Enter task description (optional)"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.textSecondary}
                 multiline
                 numberOfLines={3}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Priority</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Priority</Text>
               <View style={styles.prioritySelector}>
                 {(['low', 'medium', 'high', 'urgent'] as const).map((priority) => (
                   <TouchableOpacity
                     key={priority}
                     style={[
                       styles.priorityOption,
-                      selectedPriority === priority && styles.selectedPriorityOption,
-                      { borderColor: priorityColors[priority] }
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      selectedPriority === priority && { 
+                        backgroundColor: priorityColors[priority] + '20',
+                        borderColor: priorityColors[priority]
+                      }
                     ]}
                     onPress={() => setSelectedPriority(priority)}
                   >
                     <Text style={[
                       styles.priorityOptionText,
+                      { color: colors.text },
                       selectedPriority === priority && { color: priorityColors[priority] }
                     ]}>
                       {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -422,25 +524,52 @@ export default function PlannerScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Category</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Category</Text>
               <View style={styles.categorySelector}>
                 {(['prayer', 'quran', 'dhikr', 'charity', 'learning', 'personal'] as const).map((category) => (
                   <TouchableOpacity
                     key={category}
                     style={[
                       styles.categoryOption,
-                      selectedCategory === category && styles.selectedCategoryOption
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      selectedCategory === category && { 
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary
+                      }
                     ]}
                     onPress={() => setSelectedCategory(category)}
                   >
+                    <Ionicons 
+                      name={categoryIcons[category] as any} 
+                      size={16} 
+                      color={selectedCategory === category ? '#FFFFFF' : colors.textSecondary} 
+                    />
                     <Text style={[
                       styles.categoryOptionText,
-                      selectedCategory === category && styles.selectedCategoryOptionText
+                      { color: colors.text },
+                      selectedCategory === category && { color: '#FFFFFF' }
                     ]}>
                       {category.charAt(0).toUpperCase() + category.slice(1)}
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.switchContainer}>
+                <View>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Recurring Task</Text>
+                  <Text style={[styles.switchDescription, { color: colors.textSecondary }]}>
+                    Repeat this task daily
+                  </Text>
+                </View>
+                <Switch
+                  value={isRecurring}
+                  onValueChange={setIsRecurring}
+                  trackColor={{ false: colors.border, true: colors.primary + '40' }}
+                  thumbColor={isRecurring ? colors.primary : colors.textSecondary}
+                />
               </View>
             </View>
           </ScrollView>
@@ -453,36 +582,67 @@ export default function PlannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    paddingBottom: 100, // Space for tab bar
   },
   header: {
-    backgroundColor: '#059669',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  headerTop: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#DCFCE7',
-    marginTop: 4,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeToggle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    width: 48,
-    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -495,7 +655,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 12,
   },
   progressCards: {
@@ -504,7 +663,6 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -518,20 +676,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  progressIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
   progressTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
-    marginLeft: 8,
   },
   progressNumber: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#374151',
+    marginBottom: 4,
   },
   progressLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   section: {
     marginBottom: 24,
@@ -542,47 +716,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  taskCounter: {
+    fontSize: 14,
+  },
   prayerScroll: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
   },
   prayerCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     marginRight: 12,
     minWidth: 100,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  currentPrayerCard: {
-    borderColor: '#059669',
-    backgroundColor: '#F0FDF4',
+    position: 'relative',
   },
   prayerName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
   },
   prayerArabic: {
     fontSize: 16,
-    color: '#059669',
     marginVertical: 4,
+    fontWeight: '500',
   },
   prayerTime: {
     fontSize: 12,
-    color: '#6B7280',
     marginBottom: 8,
   },
   prayerStatus: {
     alignItems: 'center',
   },
+  currentBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   taskListsGrid: {
     gap: 12,
   },
   taskListCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
@@ -598,24 +780,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  taskListLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   taskListName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    marginLeft: 8,
   },
   taskListCount: {
     fontSize: 14,
-    color: '#6B7280',
   },
   taskListProgress: {
     marginTop: 8,
   },
-  progressBar: {
+  progressBarSmall: {
     height: 4,
     borderRadius: 2,
     overflow: 'hidden',
   },
-  progressFill: {
+  progressFillSmall: {
     height: '100%',
     borderRadius: 2,
   },
@@ -631,40 +816,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  activeFilterTab: {
-    backgroundColor: '#059669',
-    borderColor: '#059669',
   },
   filterTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
-  },
-  activeFilterTabText: {
-    color: '#FFFFFF',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
+    borderRadius: 16,
+    marginTop: 8,
   },
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6B7280',
     marginTop: 16,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
     marginTop: 4,
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+    gap: 8,
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   taskCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 8,
     flexDirection: 'row',
@@ -693,16 +880,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 4,
-  },
-  completedTaskTitle: {
-    textDecorationLine: 'line-through',
-    color: '#9CA3AF',
   },
   taskDescription: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -723,9 +904,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textTransform: 'uppercase',
   },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   categoryText: {
     fontSize: 12,
-    color: '#6B7280',
     textTransform: 'capitalize',
   },
   dueDateContainer: {
@@ -735,36 +920,34 @@ const styles = StyleSheet.create({
   },
   dueDateText: {
     fontSize: 12,
-    color: '#6B7280',
   },
   taskActions: {
     padding: 16,
   },
   quoteCard: {
-    backgroundColor: '#FEF3C7',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F59E0B',
     marginTop: 16,
+    alignItems: 'center',
+  },
+  quoteIcon: {
+    marginBottom: 12,
   },
   quoteText: {
     fontSize: 16,
-    color: '#92400E',
     fontStyle: 'italic',
     lineHeight: 24,
     textAlign: 'center',
+    marginBottom: 8,
   },
   quoteReference: {
     fontSize: 14,
-    color: '#92400E',
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: 8,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -772,23 +955,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   modalCancel: {
     fontSize: 16,
-    color: '#6B7280',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
   },
   modalSave: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#059669',
   },
   modalContent: {
     flex: 1,
@@ -800,18 +978,14 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#374151',
   },
   textArea: {
     height: 80,
@@ -827,15 +1001,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  selectedPriorityOption: {
-    backgroundColor: '#F9FAFB',
   },
   priorityOptionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   categorySelector: {
     flexDirection: 'row',
@@ -843,23 +1012,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   categoryOption: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  selectedCategoryOption: {
-    backgroundColor: '#059669',
-    borderColor: '#059669',
+    gap: 6,
   },
   categoryOptionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
-  selectedCategoryOptionText: {
-    color: '#FFFFFF',
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  switchDescription: {
+    fontSize: 14,
+    marginTop: 2,
   },
 });
